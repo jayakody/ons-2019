@@ -1,0 +1,418 @@
+
+========================================================
+    Calico Networking Walkthrough:
+========================================================
+
+
+[root@calico-node-18121 ~]# calicoctl node status
+Calico process is running.
+
+IPv4 BGP status
++--------------+-------------------+-------+------------+-------------+
+| PEER ADDRESS |     PEER TYPE     | STATE |   SINCE    |    INFO     |
++--------------+-------------------+-------+------------+-------------+
+| 35.35.35.122 | node-to-node mesh | up    | 2019-03-20 | Established |
++--------------+-------------------+-------+------------+-------------+
+
+[root@calico-node-18121 ~]# calicoctl get ippool -o wide
+NAME                  CIDR             NAT    IPIPMODE   DISABLED
+default-ipv4-ippool   192.168.0.0/16   true   Always     false
+
+[root@calico-node-18121 ~]# ip a
+10: tunl0@NONE: <NOARP,UP,LOWER_UP> mtu 1440 qdisc noqueue state UNKNOWN qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    inet 192.168.83.64/32 brd 192.168.83.64 scope global tunl0
+       valid_lft forever preferred_lft forever
+
+[root@calico-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.2.18.1       0.0.0.0         UG    0      0        0 eno1
+10.2.18.0       0.0.0.0         255.255.255.0   U     0      0        0 eno1
+25.25.25.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eno1
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+192.168.72.64   25.25.25.120    255.255.255.192 UG    0      0        0 tunl0
+192.168.83.64   0.0.0.0         255.255.255.192 U     0      0        0 *
+192.168.147.64  35.35.35.123    255.255.255.192 UG    0      0        0 tunl0
+192.168.243.0   35.35.35.122    255.255.255.192 UG    0      0        0 tunl0
+[root@calico-node-18121 ~]#
+
+
+[root@calico-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+192.168.83.64   0.0.0.0         255.255.255.192 U     0      0        0 *
+192.168.243.0   35.35.35.122    255.255.255.192 UG    0      0        0 tunl0
+[root@calico-node-18121 ~]#
+
+[root@calico-node-18121 ~]# ip route
+25.25.25.0/24 dev bond0 proto kernel scope link src 25.25.25.121
+35.35.35.0/24 via 25.25.25.254 dev bond0
+169.254.0.0/16 dev bond0 scope link metric 1008
+blackhole 192.168.83.64/26 proto bird
+192.168.243.0/26 via 35.35.35.122 dev tunl0 proto bird onlink
+
+
+
+
+
+
+[root@calico-node-18122 ~]# calicoctl node status
+Calico process is running.
+
+IPv4 BGP status
++--------------+-------------------+-------+------------+-------------+
+| PEER ADDRESS |     PEER TYPE     | STATE |   SINCE    |    INFO     |
++--------------+-------------------+-------+------------+-------------+
+| 25.25.25.121 | node-to-node mesh | up    | 2019-03-20 | Established |
++--------------+-------------------+-------+------------+-------------+
+
+[root@calico-node-18122 ~]# calicoctl get ippool -o wide
+NAME                  CIDR             NAT    IPIPMODE   DISABLED
+default-ipv4-ippool   192.168.0.0/16   true   Always     false
+
+
+       
+[root@calico-node-18122 ~]# ip a
+10: tunl0@NONE: <NOARP,UP,LOWER_UP> mtu 1440 qdisc noqueue state UNKNOWN qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    inet 192.168.243.0/32 brd 192.168.243.0 scope global tunl0
+       valid_lft forever preferred_lft forever
+       
+               
+[root@calico-node-18122 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      35.35.35.254    255.255.255.0   UG    0      0        0 bond0
+35.35.35.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+192.168.83.64   25.25.25.121    255.255.255.192 UG    0      0        0 tunl0
+192.168.243.0   0.0.0.0         255.255.255.192 U     0      0        0 *
+[root@calico-node-18122 ~]#
+
+[root@calico-node-18122 ~]# ip route
+25.25.25.0/24 via 35.35.35.254 dev bond0
+35.35.35.0/24 dev bond0 proto kernel scope link src 35.35.35.122
+169.254.0.0/16 dev bond0 scope link metric 1008
+192.168.83.64/26 via 25.25.25.121 dev tunl0 proto bird onlink
+blackhole 192.168.243.0/26 proto bird
+[root@calico-node-18122 ~]#
+
+
+
+Deploy 2 Containers:
+--------------------------
+
+$ kubectl get pods -n test -o wide
+NAME             READY   STATUS    RESTARTS   AGE   IP               NODE                 
+busybox0-4ldqp   1/1     Running   0          13s   192.168.83.67    calico-node-18121 
+busybox0-c4bl8   1/1     Running   0          13s   192.168.243.2    calico-node-18122  
+
+
+$ calicoctl get wep -n test -o wide
+NAMESPACE   WORKLOAD         NODE                NETWORKS            INTERFACE         
+test        busybox0-4ldqp   calico-node-18121   192.168.83.67/32    cali4e7dc5a6ea0   
+test        busybox0-c4bl8   calico-node-18122   192.168.243.2/32    cali596577171e6   
+
+
+
+[root@calico-node-18121 ~]# ip a
+10: tunl0@NONE: <NOARP,UP,LOWER_UP> mtu 1440 qdisc noqueue state UNKNOWN qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    inet 192.168.83.64/32 brd 192.168.83.64 scope global tunl0
+       valid_lft forever preferred_lft forever
+13: cali4e7dc5a6ea0@if4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1440 qdisc noqueue state UP
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::ecee:eeff:feee:eeee/64 scope link
+       valid_lft forever preferred_lft forever
+       
+$ kubectl exec busybox0-4ldqp -n test -- ip a
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+4: eth0@if13: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1440 qdisc noqueue
+    link/ether 72:ec:8a:4b:3e:23 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.83.67/32 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::70ec:8aff:fe4b:3e23/64 scope link
+       valid_lft forever preferred_lft forever
+       
+       
+
+[root@calico-node-18122 ~]# ip a
+10: tunl0@NONE: <NOARP,UP,LOWER_UP> mtu 1440 qdisc noqueue state UNKNOWN qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+    inet 192.168.243.0/32 brd 192.168.243.0 scope global tunl0
+       valid_lft forever preferred_lft forever
+12: cali596577171e6@if4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1440 qdisc noqueue state UP
+    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::ecee:eeff:feee:eeee/64 scope link
+       valid_lft forever preferred_lft forever
+
+$ kubectl exec busybox0-c4bl8 -n test -- ip a
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop qlen 1000
+    link/ipip 0.0.0.0 brd 0.0.0.0
+4: eth0@if12: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1440 qdisc noqueue
+    link/ether f2:38:05:f1:af:2e brd ff:ff:ff:ff:ff:ff
+    inet 192.168.243.2/32 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f038:5ff:fef1:af2e/64 scope link
+       valid_lft forever preferred_lft forever
+
+       
+
+ARP Learning in Calico:
+---------------------------
+
+$ kubectl exec busybox0-4ldqp -n test -- ip route
+default via 169.254.1.1 dev eth0
+169.254.1.1 dev eth0 scope link
+
+$ kubectl exec busybox0-c4bl8 -n test -- ip route
+default via 169.254.1.1 dev eth0
+169.254.1.1 dev eth0 scope link
+
+
+$ kubectl exec busybox0-4ldqp -n test -- arp -n
+$
+
+
+$ kubectl exec busybox0-4ldqp -n test -- ping 192.168.243.2 -c 1
+PING 192.168.243.2 (192.168.243.2): 56 data bytes
+64 bytes from 192.168.243.2: seq=0 ttl=62 time=0.381 ms
+
+--- 192.168.243.2 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.381/0.381/0.381 ms
+$
+
+$ kubectl exec busybox0-4ldqp -n test -- arp -n
+? (169.254.1.1) at ee:ee:ee:ee:ee:ee [ether]  on eth0
+$
+
+
+[root@calico-node-18121 ~]# tcpdump -i cali4e7dc5a6ea0 -nn
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on cali4e7dc5a6ea0, link-type EN10MB (Ethernet), capture size 262144 bytes
+20:44:31.575726 ARP, Request who-has 169.254.1.1 tell 192.168.83.67, length 28
+20:44:31.575746 ARP, Reply 169.254.1.1 is-at ee:ee:ee:ee:ee:ee, length 28
+20:44:31.575752 IP 192.168.83.67 > 192.168.243.2: ICMP echo request, id 5632, seq 0, length 64
+20:44:31.575931 IP 192.168.243.2 > 192.168.83.67: ICMP echo reply, id 5632, seq 0, length 64
+
+
+[root@calico-node-18121 ~]# ifconfig cali4e7dc5a6ea0
+cali4e7dc5a6ea0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1440
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 0  (Ethernet)
+
+
+
+Why? Because "proxy_arp" is enabled:
+--------------------------------------
+[root@calico-node-18121 ~]# cat /proc/sys/net/ipv4/conf/cali4e7dc5a6ea0/proxy_arp
+1
+[root@calico-node-18121 ~]#
+
+
+
+[root@calico-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+192.168.83.64   0.0.0.0         255.255.255.192 U     0      0        0 *
+192.168.83.67   0.0.0.0         255.255.255.255 UH    0      0        0 cali4e7dc5a6ea0
+192.168.243.0   35.35.35.122    255.255.255.192 UG    0      0        0 tunl0
+[root@calico-node-18121 ~]#
+
+
+[root@calico-node-18121 ~]# tcpdump -i bond0 -nn proto 4
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on bond0, link-type EN10MB (Ethernet), capture size 262144 bytes
+22:39:00.890339 IP 25.25.25.121 > 35.35.35.122: IP 192.168.83.67 > 192.168.243.2: ICMP echo request, id 4864, seq 0, length 64 (ipip-proto-4)
+22:39:00.890502 IP 35.35.35.122 > 25.25.25.121: IP 192.168.243.2 > 192.168.83.67: ICMP echo reply, id 4864, seq 0, length 64 (ipip-proto-4)
+
+
+Same node: 2 pods:
+========================
+
+$ kubectl get pods -n test -o wide
+NAME             READY   STATUS    RESTARTS   AGE    IP               NODE        
+busybox0-4ldqp   1/1     Running   73         3d1h   192.168.83.67    calico-node-18121      
+busybox0-2rw2b   1/1     Running   0          7s     192.168.83.68    calico-node-18121
+
+
+$ calicoctl get wep -n test -o wide
+NAMESPACE   WORKLOAD         NODE                NETWORKS            INTERFACE    
+test        busybox0-4ldqp   calico-node-18121   192.168.83.67/32    cali4e7dc5a6ea0     
+test        busybox0-2rw2b   calico-node-18121   192.168.83.68/32    calic202732f019 
+
+
+
+[root@calico-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+192.168.83.64   0.0.0.0         255.255.255.192 U     0      0        0 *
+192.168.83.67   0.0.0.0         255.255.255.255 UH    0      0        0 cali4e7dc5a6ea0
+192.168.83.68   0.0.0.0         255.255.255.255 UH    0      0        0 calic202732f019
+192.168.243.0   35.35.35.122    255.255.255.192 UG    0      0        0 tunl0
+[root@calico-node-18121 ~]#
+
+
+
+
+Disable IP-IP Mode:
+------------------------
+
+$ calicoctl get ippool -o wide
+NAME                  CIDR             NAT    IPIPMODE   DISABLED
+default-ipv4-ippool   192.168.0.0/16   true   Always     false
+
+$ cat changeIPPool.yaml
+apiVersion: projectcalico.org/v3
+kind: IPPool
+metadata:
+  name: default-ipv4-ippool
+spec:
+  cidr: 192.168.0.0/16
+  ipipMode: Never
+  natOutgoing: false
+  
+$ calicoctl apply -f changeIPPool.yaml
+Successfully applied 1 'IPPool' resource(s)
+
+$ calicoctl get ippool -o wide
+NAME                  CIDR             NAT     IPIPMODE   DISABLED
+default-ipv4-ippool   192.168.0.0/16   false   Never      false
+
+
+[root@calico-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+192.168.83.64   0.0.0.0         255.255.255.192 U     0      0        0 *
+192.168.243.0   25.25.25.254    255.255.255.192 UG    0      0        0 bond0
+[root@calico-node-18121 ~]#
+
+
+[root@calico-node-18122 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      35.35.35.254    255.255.255.0   UG    0      0        0 bond0
+35.35.35.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1008   0        0 bond0
+192.168.83.64   35.35.35.254    255.255.255.192 UG    0      0        0 bond0
+192.168.243.0   0.0.0.0         255.255.255.192 U     0      0        0 *
+[root@calico-node-18122 ~]#
+
+
+
+Create 2 pods:
+----------------------
+
+$ kubectl get pods -n test -o wide
+NAME             READY   STATUS    RESTARTS   AGE   IP               NODE                NOMINATED NODE   READINESS GATES
+busybox0-nvzth   1/1     Running   0          50m   192.168.83.69    calico-node-18121   <none>           <none>
+busybox0-wcm2w   1/1     Running   0          50m   192.168.243.4    calico-node-18122   <none>           <none>
+
+
+$ calicoctl get wep -n test -o wide
+NAMESPACE   WORKLOAD         NODE                NETWORKS            INTERFACE         
+test        busybox0-nvzth   calico-node-18121   192.168.83.69/32    cali12c689f4d96   
+test        busybox0-wcm2w   calico-node-18122   192.168.243.4/32    calia75062cc7be   
+
+$ kubectl exec -it busybox0-nvzth -n test ping 192.168.243.4
+PING 192.168.243.4 (192.168.243.4): 56 data bytes
+
+^C
+--- 192.168.243.4 ping statistics ---
+7 packets transmitted, 0 packets received, 100% packet loss
+command terminated with exit code 1
+$
+
+
+BGPConfiguration:
+--------------------
+
+$ cat defaultNodeMesh.yaml
+ apiVersion: projectcalico.org/v3
+ kind: BGPConfiguration
+ metadata:
+   name: default
+ spec:
+   logSeverityScreen: Info
+   nodeToNodeMeshEnabled: true
+   asNumber: 63400
+
+$ calicoctl apply -f defaultNodeMesh.yaml
+Successfully applied 1 'BGPConfiguration' resource(s)
+
+$ calicoctl get bgpconfig -o wide
+NAME      LOGSEVERITY   MESHENABLED   ASNUMBER
+default   Info          true          63400
+
+
+$ cat bgpGlobalPeer.yaml
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: bgppeer-bcf
+spec:
+  peerIP: 2.2.2.2
+  asNumber: 63400
+
+$ calicoctl create -f bgpGlobalPeer.yaml
+Successfully created 1 'BGPPeer' resource(s)
+
+$ calicoctl get bgppeer
+NAME          PEERIP    NODE       ASN
+bgppeer-bcf   2.2.2.2   (global)   63400
+
+
+[root@calico-node-18121 ~]# calicoctl node status
+Calico process is running.
+
+IPv4 BGP status
++--------------+-------------------+-------+----------+-------------+
+| PEER ADDRESS |     PEER TYPE     | STATE |  SINCE   |    INFO     |
++--------------+-------------------+-------+----------+-------------+
+| 35.35.35.122 | node-to-node mesh | up    | 05:00:33 | Established |
+| 2.2.2.2      | global            | up    | 05:02:40 | Established |
++--------------+-------------------+-------+----------+-------------+
+
+IPv6 BGP status
+No IPv6 peers found.
+
+[root@calico-node-18121 ~]#
+
+
+
+
+[root@calico-node-18122 ~]# calicoctl node status
+Calico process is running.
+
+IPv4 BGP status
++--------------+-------------------+-------+----------+-------------+
+| PEER ADDRESS |     PEER TYPE     | STATE |  SINCE   |    INFO     |
++--------------+-------------------+-------+----------+-------------+
+| 25.25.25.121 | node-to-node mesh | up    | 05:00:31 | Established |
+| 2.2.2.2      | global            | up    | 05:04:19 | Established |
++--------------+-------------------+-------+----------+-------------+
+
+IPv6 BGP status
+No IPv6 peers found.
+
+[root@calico-node-18122 ~]#
+
+

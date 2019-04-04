@@ -1,0 +1,131 @@
+
+==================================================================
+                    Cilium Networking
+==================================================================
+
+# cilium bpf tunnel list
+TUNNEL        VALUE
+192.168.2.0   35.35.35.122
+
+
+[root@cilium-node-18121 ~]# ip a
+11: cilium_host@cilium_net: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP qlen 1000
+    link/ether ea:24:6e:6a:97:d8 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.1/32 scope link cilium_host
+       valid_lft forever preferred_lft forever
+    inet6 fe80::e824:6eff:fe6a:97d8/64 scope link
+       valid_lft forever preferred_lft forever
+12: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN qlen 1000
+    link/ether 86:67:7a:f6:58:c1 brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::8467:7aff:fef6:58c1/64 scope link
+       valid_lft forever preferred_lft forever
+       
+
+# cilium bpf tunnel list
+TUNNEL        VALUE
+192.168.1.0   25.25.25.121
+
+[root@cilium-node-18122 ~]# ip a
+11: cilium_host@cilium_net: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP qlen 1000
+    link/ether 46:4a:6c:a4:51:27 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.2.1/32 scope link cilium_host
+       valid_lft forever preferred_lft forever
+    inet6 fe80::444a:6cff:fea4:5127/64 scope link
+       valid_lft forever preferred_lft forever
+12: cilium_vxlan: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN qlen 1000
+    link/ether 72:cb:a4:c7:2a:36 brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::70cb:a4ff:fec7:2a36/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+
+
+
+[root@cilium-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+192.168.1.0     192.168.1.1     255.255.255.0   UG    0      0        0 cilium_host
+192.168.1.1     0.0.0.0         255.255.255.255 UH    0      0        0 cilium_host
+192.168.2.0     192.168.1.1     255.255.255.0   UG    0      0        0 cilium_host
+
+
+[root@cilium-node-18122 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+25.25.25.0      35.35.35.254    255.255.255.0   UG    0      0        0 bond0
+192.168.1.0     192.168.2.1     255.255.255.0   UG    0      0        0 cilium_host
+192.168.2.0     192.168.2.1     255.255.255.0   UG    0      0        0 cilium_host
+192.168.2.1     0.0.0.0         255.255.255.255 UH    0      0        0 cilium_host
+
+
+
+
+
+
+[root@cilium-node-18121 ~]#  ip a
+30: lxc52a53b647a25@if29: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP qlen 1000
+    link/ether 92:bc:79:bb:b4:c2 brd ff:ff:ff:ff:ff:ff link-netnsid 4
+    inet6 fe80::90bc:79ff:febb:b4c2/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+[root@cilium-node-18121 ~]# docker exec -it cd3c5c47413e /bin/sh
+/ # ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+29: eth0@if30: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 76:a4:3a:64:a4:92 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.231/32 brd 192.168.1.231 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::74a4:3aff:fe64:a492/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+
+
+[root@cilium-node-18122 ~]# ip a
+36: lxc70681372d77f@if35: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP qlen 1000
+    link/ether 9e:a0:38:46:be:21 brd ff:ff:ff:ff:ff:ff link-netnsid 3
+    inet6 fe80::9ca0:38ff:fe46:be21/64 scope link
+       valid_lft forever preferred_lft forever
+
+[root@cilium-node-18122 ~]# docker exec -it 730a700a0d7f /bin/sh
+/ # ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+35: eth0@if36: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 5e:87:7d:26:95:ca brd ff:ff:ff:ff:ff:ff
+    inet 192.168.2.251/32 brd 192.168.2.251 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::5c87:7dff:fe26:95ca/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+
+
+[root@cilium-node-18121 ~]# docker exec -it ed8ba415daac /bin/sh
+/ # route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG    0      0        0 eth0
+192.168.1.1     0.0.0.0         255.255.255.255 UH    0      0        0 eth0
+/ #
+
+[root@Node-18121 ~]# tcpdump -i lxc97b73386ee5f -nn
+tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
+listening on lxc97b73386ee5f, link-type EN10MB (Ethernet), capture size 262144 bytes
+
+01:11:02.484685 ARP, Request who-has 192.168.1.1 tell 192.168.1.22, length 28
+01:11:02.484705 ARP, Reply 192.168.1.1 is-at ea:22:19:a6:88:22, length 28 <========== Reply through BPF
+
+
+

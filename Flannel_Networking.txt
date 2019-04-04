@@ -1,0 +1,84 @@
+
+========================================================
+    Flannel Networking Walkthrough:
+========================================================
+
+
+$ kubectl get pods -n test -o wide
+NAME             READY   STATUS    RESTARTS   AGE   IP           NODE     
+busybox0-nzxgg   1/1     Running   10         10h   10.244.1.2   flannel-node-18121          
+busybox0-6qrqm   1/1     Running   9          10h   10.244.2.2   flannel-node-18122
+
+
+
+[root@flannel-node-18121 ~]# ip a
+11: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP qlen 1000
+    link/ether 0a:58:0a:f4:01:01 brd ff:ff:ff:ff:ff:ff
+    inet 10.244.1.1/24 scope global cni0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::906e:29ff:fe39:26f7/64 scope link
+       valid_lft forever preferred_lft forever
+12: vetha0e32af3@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP
+    link/ether 9e:1c:eb:bf:e8:b3 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::9c1c:ebff:febf:e8b3/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+$ kubectl exec -it busybox0-nzxgg -n test /bin/sh
+/ # ip a
+3: eth0@if12: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1450 qdisc noqueue
+    link/ether 0a:58:0a:f4:01:02 brd ff:ff:ff:ff:ff:ff
+    inet 10.244.1.2/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::4c4e:5bff:fe16:dbf9/64 scope link
+       valid_lft forever preferred_lft forever
+/ #
+
+
+[root@flannel-node-18122 ~]# ip a
+11: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP qlen 1000
+    link/ether 0a:58:0a:f4:02:01 brd ff:ff:ff:ff:ff:ff
+    inet 10.244.2.1/24 scope global cni0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::3c3b:29ff:fe29:286d/64 scope link
+       valid_lft forever preferred_lft forever
+12: veth047ac7bb@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP
+    link/ether 06:8c:15:09:9f:63 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet6 fe80::48c:15ff:fe09:9f63/64 scope link
+       valid_lft forever preferred_lft forever
+
+
+$ kubectl exec -it busybox0-6qrqm -n test /bin/sh
+/ # ip a
+3: eth0@if12: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1450 qdisc noqueue
+    link/ether 0a:58:0a:f4:02:02 brd ff:ff:ff:ff:ff:ff
+    inet 10.244.2.2/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::2c16:d4ff:fef6:85c9/64 scope link
+       valid_lft forever preferred_lft forever
+/ #
+
+
+
+[root@flannel-node-18121 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+10.244.1.0      0.0.0.0         255.255.255.0   U     0      0        0 cni0
+10.244.2.0      10.244.2.0      255.255.255.0   UG    0      0        0 flannel.1
+25.25.25.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+35.35.35.0      25.25.25.254    255.255.255.0   UG    0      0        0 bond0
+[root@flannel-node-18121 ~]#
+
+
+
+[root@flannel-node-18122 ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+10.244.1.0      10.244.1.0      255.255.255.0   UG    0      0        0 flannel.1
+10.244.2.0      0.0.0.0         255.255.255.0   U     0      0        0 cni0
+25.25.25.0      35.35.35.254    255.255.255.0   UG    0      0        0 bond0
+35.35.35.0      0.0.0.0         255.255.255.0   U     0      0        0 bond0
+[root@flannel-node-18122 ~]#
+
+
+

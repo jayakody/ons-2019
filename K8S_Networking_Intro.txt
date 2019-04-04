@@ -1,0 +1,117 @@
+===========================================================================
+Kubernetes Networking: Basics: (How to inspect a pod namespace: 'nsenter')
+==========================================================================
+
+[root@Master1 ~]# kubectl get pods --namespace web -o wide
+NAME                                READY   STATUS    AGE     IP              NODE      
+nginx-deployment-76bf4969df-5xzv7   1/1     Running   7m53s   172.31.155.17   Worker-1  
+
+
+[root@Worker-1 ~]# docker ps
+CONTAINER ID        IMAGE                     COMMAND                  CREATED             NAMES
+93490bfce728        docker.io/nginx@sha256    "nginx -g 'daemon off"   47 seconds ago      k8s_nginx_nginx-deployment
+2ef012ea5db0        k8s.gcr.io/pause:3.1      "/pause"                 57 seconds ago      k8s_POD_nginx-deployment
+
+
+
+
+[root@worker-1 ~]# docker ps
+CONTAINER ID        IMAGE                  COMMAND                  CREATED             NAMES
+5b54f2a44c3b        d8233ab899d4           "sleep 3600"             35 minutes ago      k8s_busybox_busybox0-6hc7c
+43e42c45522b        k8s.gcr.io/pause:3.1   "/pause"                 10 hours ago        k8s_POD_busybox0-6hc7c  
+
+[root@worker-1 ~]# docker inspect -f '{{.State.Pid}}' 5b54f2a44c3b
+21388
+
+[root@worker-1 ~]# nsenter -t 21388 -n ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+17: eth0@if18: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP
+    link/ether fa:4d:26:0b:4a:c7 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.1.196/32 brd 192.168.1.196 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f84d:26ff:fe0b:4ac7/64 scope link
+       valid_lft forever preferred_lft forever
+[root@worker-1 ~]#
+
+
+[root@worker-1 ~]# docker inspect -f '{{.State.Pid}}' 43e42c45522b
+8112
+
+[root@worker-1 ~]# nsenter -t 8112 -n ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+17: eth0@if18: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP
+    link/ether fa:4d:26:0b:4a:c7 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.1.196/32 brd 192.168.1.196 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f84d:26ff:fe0b:4ac7/64 scope link
+       valid_lft forever preferred_lft forever
+[root@worker-1 ~]#
+
+[root@worker-1 ~]# nsenter -t 8112 -n ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+17: eth0@if18: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP
+    link/ether fa:4d:26:0b:4a:c7 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.1.196/32 brd 192.168.1.196 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::f84d:26ff:fe0b:4ac7/64 scope link
+       valid_lft forever preferred_lft forever
+[root@worker-1 ~]#
+
+
+
+
+======================================================
+          Service Exposture: Ingress 
+======================================================
+
+$ kubectl get services -n demo -o wide
+NAME        TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE   SELECTOR
+hostnames   ClusterIP   10.96.13.117   <none>        80/TCP    23h   app=hostnames
+
+
+$ kubectl describe service -n demo
+Name:              hostnames
+Namespace:         demo
+Labels:            <none>
+Annotations:       <none>
+Selector:          app=hostnames
+Type:              ClusterIP
+IP:                10.96.13.117
+Port:              default  80/TCP
+TargetPort:        9376/TCP
+Endpoints:         192.168.1.63:9376,192.168.2.171:9376,192.168.3.155:9376
+Session Affinity:  None
+Events:            <none>
+
+
+
+$ kubectl get pods --all-namespaces -o wide
+kube-system                  nginx-ingress-controller-5b95b96fb7-r6ltd   1/1     Running   10.2.18.62       kube-1862
+kube-system                  nginx-ingress-controller-5b95b96fb7-vj88x   1/1     Running   10.2.18.63       kube-1863
+
+$ kubectl get ingress -n demo
+NAME                HOSTS                     ADDRESS   PORTS   AGE
+ingress-hostnames   hostnames.bigswitch.com             80      6d6h
+
+$ kubectl get svc -n demo
+NAME        TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+hostnames   ClusterIP   192.168.114.9   <none>        80/TCP    17d
+
+
+
+
